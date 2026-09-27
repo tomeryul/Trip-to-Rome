@@ -1,0 +1,3 @@
+# the trip itself is private: it lives only in the link and on the phones
+private/
+trip*.json
