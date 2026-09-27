@@ -26,6 +26,27 @@
     return { date: `${p.year}-${p.month}-${p.day}`, time: `${p.hour}:${p.minute}` };
   }
 
+  // ---------- appearance (per phone, not synced): color theme + Auto / Light / Dark ----------
+  const UIKEY = 'rome26-ui';
+  const THEMES = [
+    ['rome', 'טרקוטה', '#C4553A', '#9A3821'], ['sea', 'ים', '#3A8BE0', '#1D5AAE'], ['olive', 'זית', '#6A9A4F', '#43703A'],
+    ['lavender', 'לבנדר', '#9068DC', '#6340B0'], ['rose', 'ורד', '#DA5A84', '#A8325B'], ['gold', 'זהב', '#E09A36', '#B96B14'],
+    ['classic', 'קלאסי', '#8E8E93', '#1E6EF4']
+  ];
+  let ui = {};
+  try { ui = JSON.parse(localStorage.getItem(UIKEY)) || {}; } catch { ui = {}; }
+  const darkMQ = matchMedia('(prefers-color-scheme: dark)');
+  function applyUI() {
+    const root = document.documentElement;
+    root.dataset.theme = THEMES.some(t => t[0] === ui.theme) ? ui.theme : 'rome';
+    const mode = ui.mode || 'auto';
+    root.dataset.scheme = mode === 'auto' ? (darkMQ.matches ? 'dark' : 'light') : mode;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = getComputedStyle(root).getPropertyValue('--bg-grouped').trim() || '#F2F2F7';
+  }
+  darkMQ.addEventListener?.('change', () => { if ((ui.mode || 'auto') === 'auto') applyUI(); });
+  applyUI();
+
   // ---------- symbols (SF Symbols-like, 24pt grid) ----------
   const S = (d, w = 1.9) => `<path d="${d}" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
   const F = d => `<path d="${d}" fill="currentColor" fill-rule="evenodd"/>`;
@@ -70,7 +91,8 @@
     list: S('M3.5 6.3l1.6 1.6 2.9-3.2M3.5 12.3l1.6 1.6 2.9-3.2M3.5 18.3l1.6 1.6 2.9-3.2M11 6.8h9.5M11 12.8h9.5M11 18.8h9.5'),
     star: F('M12 3.2l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.5l6-.8z'),
     info: S('M12 3.5a8.5 8.5 0 1 1 0 17 8.5 8.5 0 0 1 0-17zM12 11v5.5M12 7.8v.1', 2),
-    umbrella: S('M12 3.5a8.5 8.5 0 0 1 8.5 8.5h-17A8.5 8.5 0 0 1 12 3.5zM12 12v6.5a2 2 0 0 1-4 0')
+    umbrella: S('M12 3.5a8.5 8.5 0 0 1 8.5 8.5h-17A8.5 8.5 0 0 1 12 3.5zM12 12v6.5a2 2 0 0 1-4 0'),
+    palette: S('M12 3.5a8.5 8.5 0 0 0 0 17c1.3 0 1.9-1 1.4-2-.5-1.1.3-2.2 1.5-2.2h2.1a3.5 3.5 0 0 0 3.5-3.5C20.5 7.3 16.7 3.5 12 3.5zM7.6 12.2h.01M9.4 8h.01M14.6 8h.01M16.6 11.5h.01', 2.1)
   };
   const icon = (name, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ''}</svg>`;
   const CAT_STYLE = {
@@ -280,7 +302,7 @@
     if (q) actions += `<a class="inline-link" href="${navUrl(q)}" ${ext}>${icon('directions')}נווט</a>`;
     if (it.mine) actions += `<button class="inline-link destructive" data-act="del-add" data-key="${esc(it.mine)}">הסרה</button>`;
     const alts = (it.alts || []).filter(id => P[id]).map(id => `<a class="small-chip" href="#/place/${id}">${esc(P[id].name)}</a>`).join('');
-    return `<li class="tl-row ${cls}">
+    return `<li class="tl-row ${cls}" ${it.mine ? `data-flash="${esc(it.mine)}"` : ''}>
       <div class="tl-time"><span>${esc(it.t || '')}</span>${it.end ? `<small>${esc(it.end)}</small>` : ''}</div>
       <div class="tl-main">
         <div class="tl-title">${esc(it.title)} ${tag(it.status)}${it.mine ? ' <span class="tag t-gray">שלי</span>' : ''}${cls === 'now' ? ' <span class="tag t-now">עכשיו</span>' : ''}</div>
@@ -450,15 +472,15 @@
     h += section(timeline(dayItems(d), d.date === n.date ? n.time : null), { header: 'התוכנית', tag: 'ol', footer: 'להוספת פריט: כפתור ה-＋ למעלה.' });
     for (const s of d.suggestions || []) h += section(timeline(s.items.map(x => ({ ...x })), null), { header: `💡 ${esc(s.title)}`, tag: 'ol' });
     h += section(`<div class="text-cell"><textarea class="row-input" data-save="dnote:${d.date}" rows="3" placeholder="איפה נפגשים, מה לקנות, מה היה מעולה…" aria-label="הערות ליום">${esc(get('dnote:' + d.date) || '')}</textarea></div>`, { header: 'הערות' });
-    h += `<div class="btn-row" style="margin:0 var(--margin) 24px">${prev ? `<a class="btn btn-gray" href="#/day/${prev.date}">→ ${dayLabel(prev.date)}</a>` : '<span style="flex:1"></span>'}${next ? `<a class="btn btn-gray" href="#/day/${next.date}">${dayLabel(next.date)} ←</a>` : '<span style="flex:1"></span>'}</div>`;
+    h += `<div class="btn-row" style="margin:0 var(--margin) 24px">${prev ? `<a class="btn btn-gray" data-nav="pop" href="#/day/${prev.date}">→ ${dayLabel(prev.date)}</a>` : '<span style="flex:1"></span>'}${next ? `<a class="btn btn-gray" href="#/day/${next.date}">${dayLabel(next.date)} ←</a>` : '<span style="flex:1"></span>'}</div>`;
     return h;
   };
 
   // places list state (kept while the app is open)
   const pf = { q: '', city: 'all', cat: 'all', fav: false, mine: false, rain: false, unplanned: false };
-  const segmented = (items, current, attrs) => {
+  const segmented = (items, current, attrs, key = '') => {
     const idx = Math.max(0, items.findIndex(x => x[0] === current));
-    return `<div class="segmented" role="radiogroup" style="--count:${items.length};--index:${idx}">${items.map(([v, label, href]) => href
+    return `<div class="segmented" role="radiogroup" data-seg="${key}" style="--count:${items.length};--index:${idx}">${items.map(([v, label, href]) => href
       ? `<a role="radio" aria-checked="${v === current}" href="${href}">${label}</a>`
       : `<button role="radio" aria-checked="${v === current}" ${attrs(v)}>${label}</button>`).join('')}</div>`;
   };
@@ -468,7 +490,7 @@
     const tog = (key, label, ic) => `<button class="chip" aria-pressed="${!!pf[key]}" data-act="pft" data-k="${key}">${icon(ic)}${label}</button>`;
     return largeTitle('מקומות')
       + `<input class="search" type="search" id="q" placeholder="חיפוש: פסטה, קולוסיאום, גלידה" value="${esc(pf.q)}" autocomplete="off" aria-label="חיפוש מקומות">`
-      + segmented([['all', 'הכל'], ['rome', 'רומא'], ['florence', 'פירנצה']], pf.city, v => `data-act="pf" data-k="city" data-v="${v}"`)
+      + segmented([['all', 'הכל'], ['rome', 'רומא'], ['florence', 'פירנצה']], pf.city, v => `data-act="pf" data-k="city" data-v="${v}"`, 'city')
       + `<div class="chips">${tog('fav', 'מועדפים', 'heart')}${hasTrip ? tog('mine', 'הרשימה שלנו', 'star') + tog('unplanned', 'לא בלו״ז', 'calendar') : ''}${tog('rain', 'ליום גשום', 'umbrella')}</div>`
       + `<div class="chips">${chip('cat', 'all', 'כל הסוגים')}${T.categories.map(c => chip('cat', c.id, c.name, CAT_STYLE[c.id]?.[0])).join('')}</div>`
       + `<div id="results">${placesResults()}</div>`;
@@ -530,7 +552,7 @@
     if (p.tips?.length) h += section(p.tips.map(t => `<div class="row"><span class="row-body"><span class="row-title">${esc(t)}</span></span></div>`).join(''), { header: 'טיפים' });
     if (appears.length) h += section(appears.map(d => `<a class="row" href="#/day/${d.date}">${dateTile(d.date)}<span class="row-body"><span class="row-title">${esc(d.title)}</span><span class="row-sub">${WD[wd(d.date)]} ${dm(d.date)}</span></span>${chevron}</a>`).join(''), { header: 'בלו״ז' });
     h += section(`<label class="row"><span class="row-body"><span class="row-title">היינו כאן</span></span><input type="checkbox" role="switch" class="switch" data-toggle="been:${p.id}" ${been ? 'checked' : ''}></label>
-      ${hasTrip ? `<label class="row"><span class="row-body"><span class="row-title">הוספה ליום</span></span><select class="row-select" data-input="add-to-day" data-id="${p.id}"><option value="">בחירה</option>${T.days.map(d => `<option value="${d.date}">${WDS[wd(d.date)]} ${dm(d.date)} · ${esc(d.title)}</option>`).join('')}</select></label>` : ''}`);
+      ${hasTrip ? `<label class="row"><span class="row-body"><span class="row-title">הוספה ליום</span></span><span class="select-wrap"><select class="row-select" data-input="add-to-day" data-id="${p.id}"><option value="">בחירה</option>${T.days.map(d => `<option value="${d.date}">${WDS[wd(d.date)]} ${dm(d.date)} · ${esc(d.title)}</option>`).join('')}</select></span></label>` : ''}`);
     h += section(`<div class="text-cell"><textarea class="row-input" data-save="pnote:${p.id}" rows="2" placeholder="מה הזמנו, מה טעים, מה לא לשכוח…" aria-label="הערה אישית">${esc(get('pnote:' + p.id) || '')}</textarea></div>`, { header: 'הערה אישית' });
     return h;
   };
@@ -604,6 +626,13 @@
     emergency: { title: 'חירום', icon: 'cross', color: 'var(--red)', render: () =>
       section(T.emergency.map(e => `<div class="row"><span class="row-body"><span class="row-title">${esc(e.name)}</span>${e.note ? `<span class="row-sub">${esc(e.note)}</span>` : ''}</span><a class="btn" href="${telUrl(e.phone)}" dir="ltr">${icon('phone')}${esc(e.phone)}</a></div>`).join(''),
       { footer: T.emergencyNote ? esc(T.emergencyNote) : '' }) },
+    appearance: { title: 'מראה וצבעים', icon: 'palette', color: 'var(--pink)', render: () =>
+      `<section class="list-section"><h2 class="list-header"><span>מראה</span></h2>${segmented([['auto', 'אוטומטי'], ['light', 'בהיר'], ['dark', 'כהה']], ui.mode || 'auto', v => `data-act="ui-mode" data-v="${v}"`, 'mode')}
+        <p class="list-footer">״אוטומטי״ עובר בין בהיר לכהה לפי הגדרת האייפון.</p></section>`
+      + section(`<div class="swatches" role="radiogroup" aria-label="צבע">${THEMES.map(([id, name, c1, c2]) => `<button class="swatch" role="radio" aria-checked="${(document.documentElement.dataset.theme) === id}" data-act="ui-theme" data-v="${id}" style="--sw-1:${c1};--sw-2:${c2}"><span class="swatch-dot"></span>${name}</button>`).join('')}</div>`,
+        { header: 'צבע', footer: 'נשמר רק בטלפון הזה.' })
+      + section(`<div class="preview"><button class="btn btn-prominent" type="button">כפתור</button><button class="btn" type="button">כפתור משני</button></div>
+          <label class="row"><input type="checkbox" class="check" checked><span class="row-body"><span class="row-title">ככה ייראה פריט מסומן</span></span></label>`, { header: 'תצוגה מקדימה' }) },
     sync: { title: 'קישור וסנכרון', icon: 'sync', color: 'var(--green)', render: () => {
       const tripTs = kv.trip?.[1];
       return (hasTrip ? section(`<div class="row"><span class="row-body"><span class="row-title">גרסת הטיול בטלפון</span></span><span class="row-value">${new Date(tripTs).toLocaleString('he-IL', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></div>`) : '')
@@ -618,7 +647,7 @@
     ['הטיול', ['flights', 'hotel', 'vault']],
     ['להתנייד', ['airport', 'metro']],
     ['שימושי', ['weather', 'tips', 'phrases', 'apps', 'emergency']],
-    ['נתונים', ['sync']]
+    ['הגדרות', ['appearance', 'sync']]
   ];
   const infoPage = sub => INFO[sub] && (!INFO[sub].trip || hasTrip) ? INFO[sub] : null;
 
@@ -682,16 +711,16 @@
     if (tab) listTab = tab;
     navActions = `<button class="text-btn" data-act="edit">${editing ? 'סיום' : 'עריכה'}</button>`;
     const tabs = [...T.lists.map(l => [l.id, l.name, `#/lists/${l.id}`]), ['money', 'הוצאות', '#/lists/money']];
-    let h = largeTitle('רשימות') + segmented(tabs, listTab);
+    let h = largeTitle('רשימות') + segmented(tabs, listTab, null, 'lists');
     if (listTab === 'money') return h + moneyView();
     const l = T.lists.find(x => x.id === listTab) || T.lists[0];
     const items = listItems(l);
     const done = items.filter(it => get(it.chk)).length;
     const hidden = l.items.filter(t => get(`hide:${l.id}:${hash(t)}`)).length;
-    h += `<p class="count">${done} מתוך ${items.length}</p><div class="progress" style="margin-inline:calc(var(--margin) + 16px) calc(var(--margin) + 16px)"><div style="inline-size:${items.length ? Math.round(done / items.length * 100) : 0}%"></div></div>`;
+    h += `<p class="count" id="list-count">${done} מתוך ${items.length}</p><div class="progress" id="list-progress" style="margin-inline:calc(var(--margin) + 16px) calc(var(--margin) + 16px)"><div style="inline-size:${items.length ? Math.round(done / items.length * 100) : 0}%"></div></div>`;
     const rows = items.map(it => editing
       ? `<div class="row"><button class="minus" data-act="del-li" data-key="${esc(it.key)}" data-builtin="${it.builtIn ? 1 : 0}" aria-label="מחיקה: ${esc(it.text)}"></button><span class="row-body"><span class="row-title">${esc(it.text)}</span></span></div>`
-      : `<label class="row"><input type="checkbox" class="check" data-check="${it.chk}" ${get(it.chk) ? 'checked' : ''}><span class="row-body"><span class="row-title">${esc(it.text)}</span></span></label>`).join('');
+      : `<label class="row" data-flash="${esc(it.key)}"><input type="checkbox" class="check" data-check="${it.chk}" ${get(it.chk) ? 'checked' : ''}><span class="row-body"><span class="row-title">${esc(it.text)}</span></span></label>`).join('');
     h += section(rows + `<form class="row" data-form="add-li" data-list="${l.id}"><span class="row-icon" style="background:var(--accent);border-radius:50%;inline-size:24px;block-size:24px;font-size:15px;color:var(--on-accent)">${icon('plus')}</span><input class="row-input" name="text" placeholder="פריט חדש" autocomplete="off" aria-label="פריט חדש"><button class="text-btn">הוספה</button></form>`,
       { footer: hidden ? `<button data-act="unhide" data-list="${l.id}">החזרת ${hidden} פריטים שהוסרו</button>` : (editing ? 'מחיקה בכפתור האדום. אפשר לבטל מיד אחרי.' : '') });
     return h;
@@ -708,7 +737,7 @@
       + `<div class="row total-row"><span class="row-body"><span class="row-title">סה״כ</span></span><span class="row-value">${Math.round(preIls).toLocaleString('he-IL')}₪</span></div>`,
     { header: 'שולם לפני הטיול', footer: T.due ? esc(T.due) : '' });
     h += section(`<form class="row" data-form="add-exp"><input class="row-input" name="what" placeholder="על מה? (גלידה, מונית…)" autocomplete="off" required aria-label="על מה"><input class="row-input trailing" style="flex:0 0 72px" name="eur" type="number" inputmode="decimal" step="0.01" min="0" placeholder="€" required aria-label="סכום באירו"><button class="text-btn">הוספה</button></form>`
-      + exps.map(x => `<div class="row">${editing ? `<button class="minus" data-act="del-exp" data-key="${esc(x.key)}" aria-label="מחיקה"></button>` : ''}<span class="row-body"><span class="row-title">${esc(x.val.what)}</span><span class="row-sub">${dayLabel(x.val.d)}</span></span><span class="row-value" dir="ltr">${(+x.val.eur).toFixed(2)}€</span></div>`).join('')
+      + exps.map(x => `<div class="row" data-flash="${esc(x.key)}">${editing ? `<button class="minus" data-act="del-exp" data-key="${esc(x.key)}" aria-label="מחיקה"></button>` : ''}<span class="row-body"><span class="row-title">${esc(x.val.what)}</span><span class="row-sub">${dayLabel(x.val.d)}</span></span><span class="row-value" dir="ltr">${(+x.val.eur).toFixed(2)}€</span></div>`).join('')
       + (exps.length ? `<div class="row total-row"><span class="row-body"><span class="row-title">סה״כ בטיול</span></span><span class="row-value" dir="ltr">${eur.toFixed(2)}€<small>≈ ${Math.round(eur * rate).toLocaleString('he-IL')}₪</small></span></div>` : ''),
     { header: 'הוצאות בטיול', footer: exps.length ? '' : 'מה שמוסיפים כאן נשמר בטלפון.' });
     return h;
@@ -726,13 +755,23 @@
     return { name: V[name] ? name : 'today', arg: arg ? decodeURIComponent(arg) : undefined };
   }
 
-  function render(keepScroll) {
+  function render(keepScroll, kind) {
     const { name, arg } = parseRoute();
     const key = location.hash;
     if (!keepScroll && current) scrolls[current] = window.scrollY;
     if (name !== 'lists') editing = false;
     navActions = '';
+    const segPrev = {};
+    view.querySelectorAll('.segmented[data-seg]').forEach(el => { segPrev[el.dataset.seg] = el.style.getPropertyValue('--index'); });
+    // sections rise in on first load and tab switches; pushes already slide the whole screen
+    view.classList.toggle('no-rise', !!keepScroll || !(kind === 'tab' || kind === 'initial'));
     view.innerHTML = V[name](arg);
+    // a segmented control that survived the change slides its thumb from where it was
+    view.querySelectorAll('.segmented[data-seg]').forEach(el => {
+      const before = segPrev[el.dataset.seg], after = el.style.getPropertyValue('--index');
+      if (before !== undefined && before !== after) { el.style.setProperty('--index', before); el.getBoundingClientRect(); el.style.setProperty('--index', after); }
+    });
+    if (flashKey) { view.querySelector(`[data-flash="${CSS.escape(flashKey)}"]`)?.classList.add('row-in'); flashKey = null; }
     const lt = view.querySelector('.large-title');
     document.getElementById('title').textContent = lt ? lt.textContent : '';
     document.getElementById('nav-actions').innerHTML = (navigator.onLine ? '' : '<span class="offline">אופליין</span>') + navActions;
@@ -741,6 +780,7 @@
     document.querySelectorAll('.tabbar .tab').forEach(a => {
       if (a.dataset.tab === TAB[name]) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
+    placeLens(kind === 'initial');
     if (!keepScroll) window.scrollTo(0, scrolls[key] && (name === 'places' || name === 'plan' || (name === 'info' && !arg)) ? scrolls[key] : 0);
     current = key;
     // the small title and the bar's edge appear once the large title scrolls under the bar
@@ -759,13 +799,98 @@
     q.addEventListener('input', () => { pf.q = q.value; document.getElementById('results').innerHTML = placesResults(); });
   }
 
+  // the tab bar's selection lens springs to the current tab
+  const tabbar = document.querySelector('.tabbar');
+  const lens = document.createElement('span');
+  lens.className = 'tab-lens'; lens.setAttribute('aria-hidden', 'true');
+  tabbar.prepend(lens);
+  function placeLens(instant) {
+    const cur = tabbar.querySelector('.tab[aria-current]');
+    if (!cur) return;
+    if (instant) lens.style.transition = 'none';
+    lens.style.inlineSize = `${cur.offsetWidth}px`;
+    lens.style.transform = `translateX(${cur.offsetLeft}px)`;
+    if (instant) { lens.getBoundingClientRect(); lens.style.transition = ''; }
+  }
+  window.addEventListener('resize', () => placeLens(true));
+
+  // screen changes: push (deeper), pop (back), tab (switch sections)
+  let flashKey = null;
+  let pendingKind = null;
+  let stack = [location.hash];
+  const depth = r => (r.name === 'day' || r.name === 'place' || (r.name === 'info' && infoPage(r.arg))) ? 1 : 0;
+  const routeOf = h => { const [, name = 'today', arg] = (h.slice(1) || '/today').split('/'); return { name: V[name] ? name : 'today', arg: arg ? decodeURIComponent(arg) : undefined }; };
+  function animateView(cls) {
+    view.classList.remove('anim-push', 'anim-pop', 'anim-tab');
+    void view.offsetWidth;
+    view.classList.add(cls);
+    view.addEventListener('animationend', () => view.classList.remove(cls), { once: true });
+  }
+  function navigate(kind) {
+    inAppNavs++;
+    if (kind === 'none') { render(false, kind); return; }
+    if (kind === 'swipe') { render(false, 'pop'); animateView('anim-pop'); return; }
+    if ((kind === 'push' || kind === 'pop') && document.startViewTransition) {
+      const root = document.documentElement;
+      root.dataset.nav = kind;
+      const t = document.startViewTransition(() => render(false, kind));
+      t.finished.finally(() => { if (root.dataset.nav === kind) delete root.dataset.nav; });
+      return;
+    }
+    render(false, kind);
+    animateView(`anim-${kind}`);
+  }
+
   // back goes to the previous screen if we navigated inside the app, otherwise to the parent
   let inAppNavs = 0;
-  document.getElementById('back').addEventListener('click', () => {
+  function goBack(kind = 'pop') {
     const { name } = parseRoute();
-    if (inAppNavs > 0) history.back();
+    pendingKind = kind;
+    if (stack.length > 1) history.back();
     else location.hash = PARENT[name] || '#/today';
-  });
+  }
+  document.getElementById('back').addEventListener('click', () => goBack());
+
+  // swipe from the leading edge to go back, like a native navigation stack (only in the installed app;
+  // in Safari the browser owns that gesture)
+  const standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+  let sw = null;
+  document.addEventListener('touchstart', e => {
+    if (!standalone || e.touches.length !== 1 || !depth(parseRoute()) || !sheet.hidden) return;
+    const t = e.touches[0];
+    const fromEdge = document.dir === 'rtl' ? innerWidth - t.clientX : t.clientX;
+    if (fromEdge > 22) return;
+    sw = { x: t.clientX, y: t.clientY, d: 0, on: false };
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (!sw) return;
+    const t = e.touches[0];
+    const dx = t.clientX - sw.x, dy = t.clientY - sw.y;
+    if (!sw.on) {
+      if (Math.abs(dy) > Math.abs(dx)) { sw = null; return; }
+      if (Math.abs(dx) < 8) return;
+      sw.on = true;
+      view.style.transition = 'none';
+    }
+    sw.d = document.dir === 'rtl' ? Math.min(0, dx) : Math.max(0, dx);
+    view.style.transform = `translateX(${sw.d}px)`;
+    view.style.boxShadow = '0 0 30px rgba(0,0,0,.15)';
+  }, { passive: true });
+  const swipeEnd = () => {
+    if (!sw) return;
+    const { on, d } = sw; sw = null;
+    if (!on) return;
+    view.style.transition = `transform 260ms var(--ease-out)`;
+    if (Math.abs(d) > innerWidth * 0.3) {
+      view.style.transform = `translateX(${document.dir === 'rtl' ? -innerWidth : innerWidth}px)`;
+      setTimeout(() => { view.style.transition = view.style.transform = view.style.boxShadow = ''; goBack('swipe'); }, 240);
+    } else {
+      view.style.transform = '';
+      setTimeout(() => { view.style.transition = view.style.boxShadow = ''; }, 260);
+    }
+  };
+  document.addEventListener('touchend', swipeEnd, { passive: true });
+  document.addEventListener('touchcancel', swipeEnd, { passive: true });
 
   // ---------- import / export ----------
   const b64e = bytes => { let s = ''; bytes.forEach(b => { s += String.fromCharCode(b); }); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
@@ -809,14 +934,45 @@
 
   // ---------- events ----------
   const ACT = {
-    fav: el => { const k = 'fav:' + el.dataset.id; set(k, !get(k)); refresh(); },
-    pf: el => { pf[el.dataset.k] = el.dataset.v; render(true); },
-    pft: el => { pf[el.dataset.k] = !pf[el.dataset.k]; render(true); },
+    fav: el => {
+      const k = 'fav:' + el.dataset.id, on = !get(k);
+      set(k, on);
+      el.setAttribute('aria-pressed', String(on));
+      el.innerHTML = icon(on ? 'heartFill' : 'heart');
+      el.classList.remove('bounce'); void el.offsetWidth; el.classList.add('bounce');
+    },
+    pf: el => {
+      pf[el.dataset.k] = el.dataset.v;
+      if (el.getAttribute('role') === 'radio') {
+        const seg = el.parentElement;
+        seg.style.setProperty('--index', [...seg.children].indexOf(el));
+        [...seg.children].forEach(x => x.setAttribute('aria-checked', String(x === el)));
+      } else {
+        view.querySelectorAll(`.chip[data-k="${el.dataset.k}"]`).forEach(x => x.setAttribute('aria-pressed', String(x === el)));
+      }
+      updateResults();
+    },
+    pft: el => { pf[el.dataset.k] = !pf[el.dataset.k]; el.setAttribute('aria-pressed', String(pf[el.dataset.k])); updateResults(); },
+    'ui-mode': el => {
+      ui.mode = el.dataset.v; saveUI();
+      const seg = el.parentElement;
+      seg.style.setProperty('--index', [...seg.children].indexOf(el));
+      [...seg.children].forEach(x => x.setAttribute('aria-checked', String(x === el)));
+      recolor();
+    },
+    'ui-theme': el => {
+      ui.theme = el.dataset.v; saveUI();
+      view.querySelectorAll('.swatch').forEach(x => x.setAttribute('aria-checked', String(x === el)));
+      recolor();
+    },
     'show-unplanned': () => { Object.assign(pf, { q: '', city: 'all', cat: 'all', fav: false, mine: true, rain: false, unplanned: true }); },
-    'del-add': el => changeWithUndo(el.dataset.key, null, 'הוסר מהלו״ז'),
-    'del-li': el => changeWithUndo(el.dataset.key, el.dataset.builtin === '1' ? true : null, 'הפריט נמחק'),
-    'del-exp': el => changeWithUndo(el.dataset.key, null, 'ההוצאה נמחקה'),
-    edit: () => { editing = !editing; refresh(); },
+    'del-add': el => collapse(el, () => changeWithUndo(el.dataset.key, null, 'הוסר מהלו״ז')),
+    'del-li': el => collapse(el, () => changeWithUndo(el.dataset.key, el.dataset.builtin === '1' ? true : null, 'הפריט נמחק')),
+    'del-exp': el => collapse(el, () => changeWithUndo(el.dataset.key, null, 'ההוצאה נמחקה')),
+    edit: () => {
+      editing = !editing; refresh();
+      if (editing) { view.classList.add('edit-in'); setTimeout(() => view.classList.remove('edit-in'), 400); }
+    },
     unhide: el => { const l = T.lists.find(x => x.id === el.dataset.list); l.items.forEach(t => { const k = `hide:${l.id}:${hash(t)}`; if (get(k)) del(k); }); refresh(); },
     copy: el => copy(el.dataset.text),
     close: closeSheet,
@@ -834,7 +990,7 @@
         body: `<form id="sheet-form" data-form="add-item" data-date="${el.dataset.date}">${section(`
           <label class="row"><input class="row-input" name="title" placeholder="מה? למשל גלידה ב-Giolitti" autocomplete="off" aria-label="מה"></label>
           <label class="row"><span class="row-body"><span class="row-title">שעה</span></span><input class="row-input trailing" type="time" name="t" style="flex:0 0 auto" aria-label="שעה"></label>
-          <label class="row"><span class="row-body"><span class="row-title">מקום</span></span><select class="row-select" name="place" aria-label="מקום"><option value="">בלי</option>${groups}</select></label>`,
+          <label class="row"><span class="row-body"><span class="row-title">מקום</span></span><span class="select-wrap"><select class="row-select" name="place" aria-label="מקום"><option value="">בלי</option>${groups}</select></span></label>`,
         { footer: 'אם בוחרים מקום, לא חייבים לכתוב כלום.' })}</form>`
       });
     },
@@ -873,6 +1029,31 @@
     }
   };
   const refresh = () => render(true);
+  function updateResults() {
+    const r = document.getElementById('results');
+    if (!r) return;
+    r.innerHTML = placesResults();
+    r.animate?.([{ opacity: .4 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' });
+  }
+  function saveUI() { try { localStorage.setItem(UIKEY, JSON.stringify(ui)); } catch { } }
+  function recolor() {
+    const swap = () => applyUI();
+    if (document.startViewTransition) {
+      const root = document.documentElement;
+      root.dataset.nav = 'tab';
+      document.startViewTransition(swap).finished.finally(() => { delete root.dataset.nav; });
+    } else swap();
+  }
+  // deleting a row: it folds away first, then the change happens (with Undo)
+  function collapse(el, done) {
+    const row = el.closest('.row, .tl-row');
+    if (!row?.animate) { done(); return; }
+    row.style.overflow = 'hidden';
+    row.animate([
+      { opacity: 1, blockSize: `${row.offsetHeight}px` },
+      { opacity: 0, blockSize: '0px', paddingBlock: '0px' }
+    ], { duration: 220, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' }).finished.then(done, done);
+  }
 
   document.addEventListener('click', e => {
     const el = e.target.closest('[data-act]');
@@ -887,7 +1068,16 @@
 
   document.addEventListener('change', e => {
     const el = e.target;
-    if (el.dataset.check) { set(el.dataset.check, el.checked); if (parseRoute().name === 'lists') refresh(); }
+    if (el.classList.contains('check') && el.checked) { el.classList.remove('bounce'); void el.offsetWidth; el.classList.add('bounce'); }
+    if (el.dataset.check) {
+      set(el.dataset.check, el.checked);
+      const count = document.getElementById('list-count');
+      if (count) {                     // update the progress in place, so the check animates
+        const all = view.querySelectorAll('.check[data-check]'), done = [...all].filter(x => x.checked).length;
+        count.textContent = `${done} מתוך ${all.length}`;
+        document.querySelector('#list-progress > div').style.inlineSize = `${all.length ? Math.round(done / all.length * 100) : 0}%`;
+      }
+    }
     if (el.dataset.toggle) set(el.dataset.toggle, el.checked);
     if (el.dataset.input === 'add-to-day' && el.value) {
       const p = P[el.dataset.id];
@@ -912,18 +1102,21 @@
     if (f.dataset.form === 'add-item') {
       const title = fd.title.trim() || (fd.place && P[fd.place]?.name);
       if (!title) { toast('כתבו מה להוסיף או בחרו מקום'); return; }
-      set(`add:${f.dataset.date}:${uid()}`, { t: fd.t || '', title, place: fd.place || undefined });
+      flashKey = `add:${f.dataset.date}:${uid()}`;
+      set(flashKey, { t: fd.t || '', title, place: fd.place || undefined });
       closeSheet(); refresh(); toast('נוסף ללו״ז');
     }
     if (f.dataset.form === 'add-li' && fd.text.trim()) {
-      set(`li:${f.dataset.list}:${uid()}`, fd.text.trim());
+      flashKey = `li:${f.dataset.list}:${uid()}`;
+      set(flashKey, fd.text.trim());
       refresh();
       document.querySelector('form[data-form="add-li"] .row-input')?.focus();
     }
     if (f.dataset.form === 'add-exp') {
       const eur = parseFloat(String(fd.eur).replace(',', '.'));
       if (!fd.what.trim() || !(eur >= 0)) return;
-      set(`exp:${uid()}`, { d: nowRome().date, what: fd.what.trim(), eur });
+      flashKey = `exp:${uid()}`;
+      set(flashKey, { d: nowRome().date, what: fd.what.trim(), eur });
       refresh();
     }
   });
@@ -934,15 +1127,34 @@
     if (h.startsWith('#import=')) {
       const code = extractCode(h);
       history.replaceState(null, '', location.pathname + location.search + '#/today');
-      render();
+      stack = [location.hash];
+      render(false, 'initial');
       askImport(code);
-    } else render();
+    } else render(false, 'initial');
   }
   window.addEventListener('hashchange', () => {
     if (location.hash.startsWith('#import=')) { boot(); return; }
-    inAppNavs++;
-    render();
+    const hash = location.hash;
+    const from = routeOf(current), to = routeOf(hash);
+    let kind = pendingKind;
+    pendingKind = null;
+    if (!kind) {
+      if (stack.length > 1 && stack[stack.length - 2] === hash) kind = 'pop';
+      else if (TAB[from.name] !== TAB[to.name]) kind = 'tab';
+      else if (depth(to) !== depth(from)) kind = depth(to) > depth(from) ? 'push' : 'pop';
+      else if (to.name === 'lists') kind = 'none';
+      else kind = 'push';
+    }
+    if (kind === 'tab') stack = [hash];
+    else if ((kind === 'pop' || kind === 'swipe') && stack[stack.length - 2] === hash) stack.pop();
+    else if (kind === 'pop' || kind === 'swipe') stack[stack.length - 1] = hash;
+    else if (kind !== 'none' || stack[stack.length - 1] !== hash) stack.push(hash);
+    navigate(kind);
   });
+  // links can say which way they go (the "previous day" button slides back)
+  document.addEventListener('click', e => { const a = e.target.closest('a[data-nav]'); if (a) pendingKind = a.dataset.nav; }, true);
+  // iOS only shows :active press states when the page listens for touches
+  document.addEventListener('touchstart', () => { }, { passive: true });
   window.addEventListener('online', () => refresh());
   window.addEventListener('offline', () => refresh());
 

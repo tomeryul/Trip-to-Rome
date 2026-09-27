@@ -29,6 +29,10 @@ node tools/trip-link.mjs encode private/trip.json
 
 התיקייה `private/` לא נכנסת לגיט.
 
+## מראה
+
+במסך ״מידע״ ← ״מראה וצבעים״ בוחרים ערכת צבע (טרקוטה, ים, זית, לבנדר, ורד, זהב, קלאסי) ומצב בהיר, כהה או אוטומטי. הבחירה נשמרת בכל טלפון בנפרד.
+
 ## הפעלת GitHub Pages (פעם אחת)
 
 Settings ← Pages ← Build and deployment ← Source: **Deploy from a branch** ← Branch: `main` / `(root)` ← Save.

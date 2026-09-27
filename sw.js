@@ -1,6 +1,6 @@
 // Offline support: app files come from the network when possible (so updates show up right away)
 // and from the cache when there is no connection. Bump VERSION when the file list changes.
-const VERSION = 'rome26-v3';
+const VERSION = 'rome26-v4';
 const SHELL = [
   './', 'index.html', 'css/style.css', 'js/guide.js', 'js/app.js', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'

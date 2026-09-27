@@ -6,8 +6,17 @@
   <title>רומא</title>
   <meta name="description" content="מדריך טיול לרומא ופירנצה">
   <meta name="color-scheme" content="light dark">
-  <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F5EFE8">
+  <script>
+    // apply the saved color theme and light/dark choice before the first paint
+    (function () {
+      var d = document.documentElement, u = {};
+      try { u = JSON.parse(localStorage.getItem('rome26-ui')) || {}; } catch (e) { }
+      var m = u.mode || 'auto';
+      d.setAttribute('data-theme', u.theme || 'rome');
+      d.setAttribute('data-scheme', m === 'auto' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : m);
+    })();
+  </script>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
